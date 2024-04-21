@@ -1,0 +1,8 @@
+path: barcodes_obb
+
+train: train/images
+test: test/images
+
+nc: 1
+names: 
+  0: Barcode
