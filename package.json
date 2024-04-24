@@ -1,13 +1,12 @@
 {
-  "name": "bookmate",
+  "name": "bookmate2",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "prepare": "husky"
+    "lint": "next lint"
   },
   "dependencies": {
     "react": "^18",
