@@ -9,7 +9,6 @@ def get_isbns(image_path):
     results = model(image_path, save=True)
     image = Image.open(image_path)
     draw = ImageDraw.Draw(image)
-    # font = ImageFont.truetype('arial.ttf', 56)
     font = ImageFont.load_default(size=56)
     isbns = []
 

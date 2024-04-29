@@ -24,9 +24,7 @@ def filter_directory(dataset_path, class_number):
                 file.write("\n".join(result))
 
 if __name__ == '__main__':
-    filter_directory('./datasets/barcodes/test', 0)
+    filter_directory('./datasets/barcodes_obb/test', 0)
     print('Test directory filtered')
-    filter_directory('./datasets/barcodes/train', 0)
+    filter_directory('./datasets/barcodes_obb/train', 0)
     print('Train directory filtered')
-    filter_directory('./datasets/barcodes/valid', 0)
-    print('Valid directory filtered')
