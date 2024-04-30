@@ -6,10 +6,10 @@ model = YOLO("best.pt")
 model.fuse()
 
 def get_isbns(image_path):
-    results = model(image_path, save=True)
     image = Image.open(image_path)
+    results = model(image, save=True)
     draw = ImageDraw.Draw(image)
-    font = ImageFont.load_default(size=56)
+    font = ImageFont.truetype("arial.ttf", 56)
     isbns = []
 
     boxes = [box.cpu().numpy().tolist() for box in results[0].obb.xyxyxyxy]
