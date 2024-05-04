@@ -37,3 +37,5 @@ next-env.d.ts
 runs
 .venv
 datasets
+
+.env

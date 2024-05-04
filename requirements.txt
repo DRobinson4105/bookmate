@@ -1,0 +1,6 @@
+pyzbar
+ultralytics
+Flask
+Flask-Cors
+waitress
+python-dotenv
