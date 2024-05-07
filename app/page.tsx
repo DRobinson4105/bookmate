@@ -5,7 +5,7 @@ import Link from 'next/link';
 import axios from 'axios';
 
 export default function Home() {
-	const { images, setImages, isbns, setIsbns } = useGlobalContext();
+	const { images, setImages, boxedImages, setBoxedImages, isbns, setIsbns } = useGlobalContext();
     const [nonImageFiles, setNonImageFiles] = useState<boolean>(false);
 
     const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -25,7 +25,7 @@ export default function Home() {
     };
 
 	const handleDone = async () => {
-		let result = []
+		let images0 = [], isbns0 = [];
 
 		for (let image of images) {
 			let formData = new FormData();
@@ -40,10 +40,14 @@ export default function Home() {
 				}
 			);
 
-			result.push(response.data)
+			const data = await response.data;
+            images0.push(data.image)
+            for (let isbn of data.isbns)
+                isbns0.push(isbn)
 		}
 
-		setIsbns(result);
+		setBoxedImages(images0)
+        setIsbns(isbns0)
 	}
 
   return (

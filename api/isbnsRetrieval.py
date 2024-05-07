@@ -1,5 +1,5 @@
 from pyzbar.pyzbar import decode
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from ultralytics import YOLO
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -7,6 +7,7 @@ from waitress import serve
 from dotenv import load_dotenv
 import os
 import io
+import base64
 
 # init
 model = YOLO("barcodeDetection.pt")
@@ -24,6 +25,8 @@ def get_isbns():
     file = request.files.get('file')
     image_stream = io.BytesIO(file.read())
     image = Image.open(image_stream)
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.truetype("arial.ttf", 56)
     results = model(image, save=True)
 
     result = []
@@ -48,11 +51,28 @@ def get_isbns():
 
         if len(decoded_objects) == 0: continue
 
+        
+        left, top, right, bottom = left-50, top-50, right+50, bottom+50
+        draw.rectangle((left, top, right, bottom), outline="black", fill=None, width=5)
+
         isbn = decoded_objects[0].data.decode("utf-8")
-        result.append([isbn, str(left), str(top), str(right), str(bottom)])
+        position = (left, top - 75)
+        text = 'ISBN: ' + isbn
+        left, top, right, bottom = draw.textbbox(position, text, font=font)
+        draw.rectangle((left-5, top-5, right+5, bottom+5), fill="white")
+        draw.text(position, text, fill="black", font=font)
+
+        result.append(isbn)
     
-    return jsonify(result)
-    # return "test"
+    img_io = io.BytesIO()
+    image.save(img_io, 'JPEG')
+    img_io.seek(0)
+    img_io_base64 = base64.b64encode(img_io.getvalue()).decode('utf-8')
+    
+    return jsonify({
+        'image': f"data:image/jpeg;base64,{img_io_base64}",
+        'isbns': result
+    })
 
 if __name__ == "__main__":
     serve(app, host="127.0.0.1", port=os.environ["FLASK_PORT"])

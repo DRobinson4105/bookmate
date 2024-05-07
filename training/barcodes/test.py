@@ -9,7 +9,7 @@ def get_isbns(image_path):
     image = Image.open(image_path)
     results = model(image, save=True)
     draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype("arial.ttf", 56)
+    font = ImageFont.truetype("arial.ttf", 150)
     isbns = []
 
     boxes = [box.cpu().numpy().tolist() for box in results[0].obb.xyxyxyxy]
