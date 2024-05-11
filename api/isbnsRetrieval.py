@@ -26,7 +26,7 @@ def get_isbns():
     image_stream = io.BytesIO(file.read())
     image = Image.open(image_stream)
     draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype("arial.ttf", 56)
+    font = ImageFont.truetype("arial.ttf", 72)
     results = model(image, save=True)
 
     result = []
