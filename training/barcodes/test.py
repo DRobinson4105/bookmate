@@ -2,7 +2,7 @@ from pyzbar.pyzbar import decode
 from PIL import Image, ImageDraw, ImageFont
 from ultralytics import YOLO
 
-model = YOLO("best.pt")
+model = YOLO("model.pt")
 model.fuse()
 
 def get_isbns(image_path):
