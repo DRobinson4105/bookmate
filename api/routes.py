@@ -9,16 +9,18 @@ import os
 import io
 import base64
 
-# init
-model = YOLO("barcodeDetection.pt")
-model.fuse()
-
 app = Flask(__name__)
 CORS(app)
 
 load_dotenv()
 
-print('API Ready')
+# get api directory
+dir = os.path.dirname(os.path.abspath(__file__))
+
+# ISBN Retrieval
+
+model = YOLO(os.path.join(dir, "barcodeDetection.pt"))
+model.fuse()
 
 @app.route("/api/getISBNs", methods=["POST"])
 def get_isbns():
@@ -31,6 +33,7 @@ def get_isbns():
 
     result = []
 
+    # get bounding box coordinates
     boxes = [box.cpu().numpy().tolist() for box in results[0].obb.xyxyxyxy]
     boxes = [[[int(num) for num in pair] for pair in box] for box in boxes]
 
@@ -40,6 +43,7 @@ def get_isbns():
         right = 0
         bottom = 0
 
+        # widen bounding box
         for pair in box:
             left = min(left, pair[0])
             top = min(top, pair[1])
@@ -47,14 +51,16 @@ def get_isbns():
             bottom = max(bottom, pair[1])
 
         left, top, right, bottom = left-50, top-50, right+50, bottom+50
+
+        # get isbn from cropped image
         decoded_objects = decode(image.crop((left, top, right, bottom)))
 
         if len(decoded_objects) == 0: continue
-
         
-        left, top, right, bottom = left-50, top-50, right+50, bottom+50
+        # draw bounding box on image
         draw.rectangle((left, top, right, bottom), outline="black", fill=None, width=5)
 
+        # display isbn on image
         isbn = decoded_objects[0].data.decode("utf-8")
         position = (left, top - 75)
         text = 'ISBN: ' + isbn
@@ -64,6 +70,7 @@ def get_isbns():
 
         result.append(isbn)
     
+    # save new image with isbns and bounding boxes
     img_io = io.BytesIO()
     image.save(img_io, 'JPEG')
     img_io.seek(0)
@@ -75,4 +82,5 @@ def get_isbns():
     })
 
 if __name__ == "__main__":
+    print("API Ready")
     serve(app, host="127.0.0.1", port=os.environ["FLASK_PORT"])
