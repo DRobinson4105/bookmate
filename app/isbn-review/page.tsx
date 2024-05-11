@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useGlobalContext } from "../context/GlobalContext";
-import axios from "axios";
-import BoundingBoxesComponent from "../components/ImageDisplay";
 
 export default function Home() {
 	const { images, setImages, boxedImages, setBoxedImages, isbns, setIsbns } = useGlobalContext();

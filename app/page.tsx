@@ -3,10 +3,13 @@ import React, { useState, ChangeEvent } from 'react';
 import { useGlobalContext } from './context/GlobalContext';
 import Link from 'next/link';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+    const router = useRouter();
 	const { images, setImages, boxedImages, setBoxedImages, isbns, setIsbns } = useGlobalContext();
     const [nonImageFiles, setNonImageFiles] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(false);
 
     const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -24,8 +27,8 @@ export default function Home() {
         setImages(images.slice(0, index).concat(images.slice(index + 1)));
     };
 
-	const handleDone = async () => {
-		let images0 = [], isbns0 = [];
+    const processImages = async () => {
+        let images0 = [], isbns0 = [];
 
 		for (let image of images) {
 			let formData = new FormData();
@@ -33,11 +36,7 @@ export default function Home() {
 			const response = await axios.post(
 				"http://127.0.0.1:5328/api/getISBNs",
 				formData,
-				{
-					headers: {
-						"Content-Type": "multipart/form-data",
-					},
-				}
+				{ headers: { "Content-Type": "multipart/form-data", }, }
 			);
 
 			const data = await response.data;
@@ -48,11 +47,18 @@ export default function Home() {
 
 		setBoxedImages(images0)
         setIsbns(isbns0)
-	}
+    };
+
+	const handleDone = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.preventDefault();
+        setLoading(true);
+        await processImages();
+        router.push("/isbn-review")
+	};
 
   return (
 	<main className="flex min-h-screen flex-col items-center justify-between p-24">
-              <div className="flex flex-col justify-center items-center ">
+        <div className="flex flex-col justify-center items-center ">
             <div>
             <h1 className="m-10 text-7xl">Upload Images</h1>
             {images.map((file, index) => (
@@ -62,11 +68,15 @@ export default function Home() {
                 </div>
             ))}
             </div>
-            <input type="file" onChange={handleFileChange} className="
+            <input type="file" onChange={handleFileChange} className=" 
                 block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
                 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-300"/>
-            <Link onClick={handleDone} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-300" href={"/isbn-review"}>Done</Link>
+            <Link onClick={handleDone} className="
+                mt-4 px-4 py-2 bg-blue-500 text-white rounded 
+                shadow hover:bg-blue-300" href={"/isbn-review"}
+            >Done</Link>
 			{nonImageFiles && <p className="text-red-500">File is not an image</p>}
+            {loading && <p>Loading...</p>}
         </div>
     </main>
   );
