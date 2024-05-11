@@ -39,3 +39,4 @@ runs
 datasets
 
 .env
+__pycache__
