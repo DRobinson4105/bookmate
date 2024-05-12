@@ -5,9 +5,15 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from waitress import serve
 from dotenv import load_dotenv
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence
 import os
 import io
 import base64
+from price_predictor import Model, BookDataset
 
 app = Flask(__name__)
 CORS(app)
@@ -19,8 +25,8 @@ dir = os.path.dirname(os.path.abspath(__file__))
 
 # ISBN Retrieval
 
-model = YOLO(os.path.join(dir, "barcodeDetection.pt"))
-model.fuse()
+barcode_model = YOLO(os.path.join(dir, "barcodeDetection.pt"))
+barcode_model.fuse()
 
 @app.route("/api/getISBNs", methods=["POST"])
 def get_isbns():
@@ -29,7 +35,7 @@ def get_isbns():
     image = Image.open(image_stream)
     draw = ImageDraw.Draw(image)
     font = ImageFont.truetype("arial.ttf", 72)
-    results = model(image, save=True)
+    results = barcode_model(image, save=True)
 
     result = []
 
@@ -80,6 +86,30 @@ def get_isbns():
         'image': f"data:image/jpeg;base64,{img_io_base64}",
         'isbns': result
     })
+
+def get_listings(isbns):
+    pass
+
+# Price Prediction
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+price_model = Model().to(device)
+price_model.load_state_dict(torch.load(f="pricePrediction.pt"))
+
+def get_prices(details_list, listings_list):
+    prices = []
+    
+    dataset = BookDataset(details_list, listings_list)
+    dataloader = DataLoader(dataset)
+
+    for details, listings, _ in dataloader:
+        prices.append(price_model(details, listings).item())
+
+    return prices
+
+# def generate_spreadsheet()
+
+print(get_prices([[1, 2], [3, 4]], [[1, 2, 3, 4], [5, 6]]))
 
 if __name__ == "__main__":
     print("API Ready")
