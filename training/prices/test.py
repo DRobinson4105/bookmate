@@ -1,9 +1,6 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
-from torch.nn.utils.rnn import pad_sequence
-from train import BookDataset, Model
+from torch.utils.data import DataLoader
+from price_predictor import BookDataset, Model
 
 torch.manual_seed(1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
