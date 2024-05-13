@@ -12,97 +12,138 @@ options.headless = False
 
 scrollTime = 1
 
-driver_path = r'C:\Users\maxpg\OneDrive\Desktop\BookMate\amazon_web_scraping'
-link = "https://www.amazon.com/Six-Crows-Leigh-Bardugo/dp/125007696X/ref=sr_1_1?sr=8-1"
-driver = webdriver.Chrome(options=options)
+def convert_isbn(isbn_13):
+    isbn_string = str(isbn_13)
+    check_digit = 0
+    for i in range(9):
+        check_digit += (10 - i) * int(isbn_string[3 + i])
 
-driver.get(link)
+    check_digit = str(11 - (check_digit % 11))
 
-# Keep retrying the Captcha until a success is found/No Captcha, Every attempt changes the captcha on amazon
-while(1):
-    try:
-        listings = driver.find_element(By.XPATH, "//*[@id='dynamic-aod-ingress-box']/div/div[2]/a/span/span[1]")
-        break
-    except:
-        driver.save_screenshot(f"{driver_path}/captcha.png")
-        img = Image.open(f"{driver_path}/captcha.png")
+    if check_digit == 10:
+        check_digit = "X"
 
-        # Gets the rectangle surrounding the Captcha
-        letters = img.crop((950, 740, 1600, 925))
-        letters.save(f"{driver_path}/cropped.png")
+    isbn_10 = isbn_string[slice(3, 12)] + check_digit
 
-        # Read the screenshot and get the characters
-        solution = reader.readtext(f"{driver_path}/cropped.png", detail=1)
+    return isbn_10
 
-        # Input the solution
-        captcha_input = driver.find_element(By.XPATH, "//*[@id='captchacharacters']")
-        captcha_input.send_keys(solution[0][1])
+def get_listings(isbn_10):
+    link = f"https://www.amazon.com/dp/{isbn_10}"
+    driver = webdriver.Chrome(options=options)
 
-        button = driver.find_element(By.XPATH, "/html/body/div/div[1]/div[3]/div/div/form/div[2]/div/span")
-        button.click()
+    driver.get(link)
+    # Keep retrying the Captcha until a success is found/No Captcha, Every attempt changes the captcha on amazon
+    while(1):
+        try:
+            listings = driver.find_element(By.XPATH, "//*[@id='dynamic-aod-ingress-box']/div/div[2]/a/span/span[1]")
+            break
+        except:
+            driver.save_screenshot("./captcha.png")
+            img = Image.open("./captcha.png")
 
-if(listings == None):
-    print("not found")
-    exit()
+            # Gets the rectangle surrounding the Captcha
+            letters = img.crop((950, 740, 1600, 925))
+            letters.save("./cropped.png")
 
-listings.click()
+            # Read the screenshot and get the characters
+            solution = reader.readtext("./cropped.png", detail=1)
 
-driver.implicitly_wait(2*scrollTime)
+            # Input the solution
+            captcha_input = driver.find_element(By.XPATH, "//*[@id='captchacharacters']")
+            captcha_input.send_keys(solution[0][1])
 
-counter = 1
+            button = driver.find_element(By.XPATH, "/html/body/div/div[1]/div[3]/div/div/form/div[2]/div/span")
+            button.click()
 
-# Loads the first 30 items
-while counter < 3:
-    try:
-        frame = driver.find_element(By.XPATH, f"//*[@id='aod-price-{counter*10}']/div/span/span[1]")
-        driver.execute_script("arguments[0].scrollIntoView(true)", frame);
-        time.sleep(1.5)
-    except:
-        break
+    if(listings == None):
+        print("not found")
+        exit()
 
-    counter+=1
+    listings.click()
 
-# Loads the remaining items
-while True:
-    try:
-        new = driver.find_element(By.XPATH, "//*[@id='aod-show-more-offers']")
-        new.click()
-    except:
-        break;
+    # Get rank for item
+    rank_element = driver.find_element(By.XPATH,
+                                    "//*[@id='detailBulletsWrapper_feature_div']/ul[1]/li/span").get_attribute(
+                                        "textContent")
 
-count = 0
+    tokens = rank_element.strip().split()
 
-price_list = []
+    # Extract Rank
+    for token in tokens:
+        if token[0] == '#':
+            rank = int(token.replace('#', "").replace(',', ""))
+            break
 
-# Get all price listings
-while True:
-    try:
-        price = driver.find_element(By.XPATH, f"//*[@id='aod-price-{count}']/div/span/span[1]").get_attribute("textContent")
-        element = price.replace("$", "")
-        price_list.append(element)
-    except:
-        break
-    count += 1
+    driver.implicitly_wait(2*scrollTime)
 
-quality = driver.find_elements(By.XPATH, "//*[@id='aod-offer-heading']/h5")
-quality_list = []
+    counter = 1
 
-for index, qual in enumerate(quality):
+    # Loads the first 30 items
+    while counter < 3:
+        try:
+            frame = driver.find_element(By.XPATH, f"//*[@id='aod-price-{counter*10}']/div/span/span[1]")
+            driver.execute_script("arguments[0].scrollIntoView(true)", frame);
+            time.sleep(1.5)
+        except:
+            break
 
-    # There is one extra element that has this XPATH, duplicating the quality of the first listing, so it's ignored
-    if(index == 0):
-        continue
+        counter+=1
 
-    # Removes extra characters, all used books have an actual quality to them
-    element = " ".join(qual.get_attribute("textContent").split())
-    quality_list.append(element.replace("Used - ", ""))
+    # Loads the remaining items
+    while True:
+        try:
+            new = driver.find_element(By.XPATH, "//*[@id='aod-show-more-offers']")
+            new.click()
+        except:
+            break;
 
-book_list = []
+    count = 0
+    price_list = []
 
-# Combines price and quality
-for a, b in zip(price_list, quality_list):
-    book_list.append((a, b))
+    # Get all price listings
+    while True:
+        try:
+            price = driver.find_element(By.XPATH, f"//*[@id='aod-price-{count}']/div/span/span[1]").get_attribute("textContent")
+            element = price.replace("$", "")
+            element = float(element)
+            price_list.append(element)
+        except:
+            break
+        count += 1
 
-print(book_list)
+    quality = driver.find_elements(By.XPATH, "//*[@id='aod-offer-heading']/h5")
+    quality_list = []
 
-driver.close()
+    for index, qual in enumerate(quality):
+        # There is one extra element that has this XPATH, duplicating the quality of the first listing, so it's ignored
+        if(index == 0):
+            continue
+
+        # Removes extra characters, all used books have an actual quality to them
+        element = " ".join(qual.get_attribute("textContent").split())
+        element = element.replace("Used - ", "")
+
+        # Convert quality to numerical value
+        if element == "New":
+            quality_list.append(0)
+        elif element == "Like New":
+            quality_list.append(1)
+        elif element == "Very Good":
+            quality_list.append(2)
+        elif element == "Good":
+            quality_list.append(3)
+        elif element == "Acceptable":
+            quality_list.append(4)
+
+    book_list = []
+
+    # Combines price and quality
+    for a, b in zip(price_list, quality_list):
+        book_list.append((a, b))
+
+    # Gets specific item data in tuple
+    item = (price_list[0], rank)
+
+    driver.close()
+
+    return item, book_list
