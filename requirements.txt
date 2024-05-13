@@ -4,3 +4,6 @@ Flask
 Flask-Cors
 waitress
 python-dotenv
+selenium
+torch
+easyocr
