@@ -41,9 +41,14 @@ def get_listings(isbn_10):
             driver.save_screenshot("./captcha.png")
             img = Image.open("./captcha.png")
 
-            # Gets the rectangle surrounding the Captcha
-            letters = img.crop((950, 740, 1600, 925))
-            letters.save("./cropped.png")
+            # Crop center of image to get captcha
+            width, height = img.size
+            left = width / 4
+            top = height / 4
+            right = 3 * width / 4
+            bottom = 3 * height / 4
+            img = img.crop((left, top, right, bottom))
+            img.save('./cropped.png')
 
             # Read the screenshot and get the characters
             solution = reader.readtext("./cropped.png", detail=1)
@@ -147,3 +152,5 @@ def get_listings(isbn_10):
     driver.close()
 
     return item, book_list
+
+print(get_listings(convert_isbn(9781936806119)))

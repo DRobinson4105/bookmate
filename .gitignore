@@ -40,3 +40,7 @@ datasets
 
 .env
 __pycache__
+
+captcha.png
+cropped.png
+chromedriver.exe

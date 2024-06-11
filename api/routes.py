@@ -23,6 +23,10 @@ load_dotenv()
 # get api directory
 dir = os.path.dirname(os.path.abspath(__file__))
 
+
+condition_stoi = {'New': 0, 'UsedLikeNew': 1, 'UsedVeryGood': 2, 'UsedGood': 3, 'UsedAcceptable': 4}
+condition_itos = {value: key for key, value in condition_stoi.items()}
+
 # ISBN Retrieval
 
 barcode_model = YOLO(os.path.join(dir, "barcodeDetection.pt"))
