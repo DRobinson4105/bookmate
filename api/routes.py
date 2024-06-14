@@ -1,7 +1,7 @@
 from pyzbar.pyzbar import decode
 from PIL import Image, ImageDraw, ImageFont
 from ultralytics import YOLO
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from waitress import serve
 from dotenv import load_dotenv
@@ -14,6 +14,23 @@ import os
 import io
 import base64
 from price_predictor import Model, BookDataset
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+import time
+import easyocr
+from PIL import Image
+import openpyxl
+from openpyxl.styles import PatternFill
+
+reader = easyocr.Reader(['en'])
+
+options = Options()
+options.headless = False
+
+scrollTime = 1
+
+condition_stoi = {'New': 0, 'Like New': 1, 'Very Good': 2, 'Good': 3, 'Acceptable': 4}
 
 app = Flask(__name__)
 CORS(app)
@@ -22,10 +39,6 @@ load_dotenv()
 
 # get api directory
 dir = os.path.dirname(os.path.abspath(__file__))
-
-
-condition_stoi = {'New': 0, 'UsedLikeNew': 1, 'UsedVeryGood': 2, 'UsedGood': 3, 'UsedAcceptable': 4}
-condition_itos = {value: key for key, value in condition_stoi.items()}
 
 # ISBN Retrieval
 
@@ -91,8 +104,188 @@ def get_isbns():
         'isbns': result
     })
 
-def get_listings(isbns):
-    pass
+@app.route("/api/genSpreadsheet", methods=["POST"])
+def get_spreadsheet():
+    isbns = request.form.get("isbns")
+    
+    # unstringify list
+    isbns = isbns.strip(']["').split('","')
+
+    details_list, prices_list, conditions_list = [], [], []
+    temp = []
+    for isbn in isbns:
+        a, b, c = get_listings(isbn)
+        if a == None: continue
+        temp.append(isbn)
+
+        details_list.append(a)
+        prices_list.append(b)
+        conditions_list.append(c)
+
+    # Rebuild isbn list with only valid isbns
+    isbns = temp
+
+    prices = get_prices(details_list, prices_list, conditions_list)
+
+    workbook = openpyxl.load_workbook('template.xlsx')
+    sheet = workbook.active
+    length = len(prices)
+    green = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")
+
+    # print(prices, isbns)
+    for i in range(length):
+        cell = lambda l: l + str(i+4)
+        row = [1, 0, 0, prices[i], None, isbns[i], "ISBN", "New"]
+
+        for col, value in enumerate(row, start=1):
+            sheet.cell(row=i+4, column=col).value = value
+
+        sheet[cell("C")].fill = green
+        sheet[cell("U")] = "Amazon_NA"
+        sheet[cell("AB")] = "NO"
+        
+        for col in range(42, 47):
+            sheet.cell(row=i+4, column=col).value = "not_applicable"
+
+    workbook.save("test2.xlsx")
+    io_stream = io.BytesIO()
+    workbook.save(io_stream)
+    io_stream.seek(0)
+
+    return send_file(
+        io_stream,
+        as_attachment=True,
+        download_name='processing-summary.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+def get_listings(isbn_13):
+    isbn_string = str(isbn_13)
+    check_digit = 0
+    for i in range(9):
+        check_digit += (10 - i) * int(isbn_string[3 + i])
+
+    check_digit = str(11 - (check_digit % 11))
+
+    if check_digit == 10:
+        check_digit = "X"
+
+    isbn_10 = isbn_string[slice(3, 12)] + check_digit
+
+    link = f"https://www.amazon.com/dp/{isbn_10}"
+    driver = webdriver.Chrome(options=options)
+
+    driver.get(link)
+
+    # Keep retrying the Captcha until a success is found/No Captcha, Every attempt changes the captcha on amazon
+    while True:
+        try:
+            try:
+                listings = driver.find_element(By.XPATH, "//*[@id='dynamic-aod-ingress-box']/div/div[2]/a/span/span[1]")
+                break
+            except:
+                driver.save_screenshot("./captcha.png")
+                img = Image.open("./captcha.png")
+
+                # Crop center of image to get captcha
+                width, height = img.size
+                left = width / 4
+                top = height / 4
+                right = 3 * width / 4
+                bottom = 3 * height / 4
+                img = img.crop((left, top, right, bottom))
+                img.save('./cropped.png')
+
+                # Read the screenshot and get the characters
+                solution = reader.readtext("./cropped.png", detail=1)
+
+                # Input the solution
+                captcha_input = driver.find_element(By.XPATH, "//*[@id='captchacharacters']")
+                captcha_input.send_keys(solution[0][1])
+
+                button = driver.find_element(By.XPATH, "/html/body/div/div[1]/div[3]/div/div/form/div[2]/div/span")
+                button.click()
+        except:
+            return None, None, None
+
+    if(listings == None): exit()
+
+    # Get rank for item
+    try:
+        rank_element = driver.find_element(By.XPATH,
+                                    "//*[@id='detailBulletsWrapper_feature_div']/ul[1]/li/span").get_attribute(
+                                        "textContent")
+        tokens = rank_element.strip().split()
+    except:
+        tokens = []
+
+    listings.click()
+
+    # Extract Rank
+    rank = 0
+    for token in tokens:
+        if token[0] == '#':
+            rank = int(token.replace('#', "").replace(',', ""))
+            break
+
+    driver.implicitly_wait(2*scrollTime)
+
+    counter = 1
+
+    # Loads the first 30 items
+    while counter < 3:
+        try:
+            frame = driver.find_element(By.XPATH, f"//*[@id='aod-price-{counter*10}']/div/span/span[1]")
+            driver.execute_script("arguments[0].scrollIntoView(true)", frame);
+            time.sleep(1.5)
+        except:
+            break
+
+        counter+=1
+
+    # Loads the remaining items
+    while True:
+        try:
+            new = driver.find_element(By.XPATH, "//*[@id='aod-show-more-offers']")
+            new.click()
+        except:
+            break;
+
+    count = 0
+    prices_list = []
+
+    # Get all price listings
+    while True:
+        try:
+            price = driver.find_element(By.XPATH, f"//*[@id='aod-price-{count}']/div/span/span[1]").get_attribute("textContent")
+            element = price.replace("$", "")
+            element = float(element)
+            prices_list.append(element)
+        except:
+            break
+        count += 1
+
+    quality = driver.find_elements(By.XPATH, "//*[@id='aod-offer-heading']/h5")
+    conditions_list = []
+
+    for index, qual in enumerate(quality):
+        # There is one extra element that has this XPATH, duplicating the quality of the first listing, so it's ignored
+        if(index == 0):
+            continue
+
+        # Removes extra characters, all used books have an actual quality to them
+        element = " ".join(qual.get_attribute("textContent").split())
+        element = element.replace("Used - ", "").replace("Collectible - ", "")
+
+        # Convert quality to numerical value
+        conditions_list.append(condition_stoi[element])
+
+    # Gets specific item data in tuple
+    details_list = (prices_list[0], rank)
+
+    driver.close()
+
+    return details_list, prices_list, conditions_list
 
 # Price Prediction
 
@@ -100,20 +293,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 price_model = Model().to(device)
 price_model.load_state_dict(torch.load(f="pricePrediction.pt"))
 
-def get_prices(details_list, listings_list):
-    prices = []
+def get_prices(details_list, prices_list, conditions_list):
+    result = []
     
-    dataset = BookDataset(details_list, listings_list)
+    dataset = BookDataset(details_list, prices_list, conditions_list)
     dataloader = DataLoader(dataset)
 
-    for details, listings, _ in dataloader:
-        prices.append(price_model(details, listings).item())
+    for details, prices, conditions, _ in dataloader:
+        result.append(price_model(details, prices, conditions).item())
 
-    return prices
-
-# def generate_spreadsheet()
-
-print(get_prices([[1, 2], [3, 4]], [[1, 2, 3, 4], [5, 6]]))
+    return result
 
 if __name__ == "__main__":
     print("API Ready")

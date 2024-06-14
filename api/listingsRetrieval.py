@@ -12,7 +12,9 @@ options.headless = False
 
 scrollTime = 1
 
-def convert_isbn(isbn_13):
+condition_stoi = {'New': 0, 'Like New': 1, 'Very Good': 2, 'Good': 3, 'Acceptable': 4}
+
+def get_listings(isbn_13):
     isbn_string = str(isbn_13)
     check_digit = 0
     for i in range(9):
@@ -25,9 +27,6 @@ def convert_isbn(isbn_13):
 
     isbn_10 = isbn_string[slice(3, 12)] + check_digit
 
-    return isbn_10
-
-def get_listings(isbn_10):
     link = f"https://www.amazon.com/dp/{isbn_10}"
     driver = webdriver.Chrome(options=options)
 
@@ -64,13 +63,12 @@ def get_listings(isbn_10):
         print("not found")
         exit()
 
-    listings.click()
-
     # Get rank for item
     rank_element = driver.find_element(By.XPATH,
                                     "//*[@id='detailBulletsWrapper_feature_div']/ul[1]/li/span").get_attribute(
                                         "textContent")
 
+    listings.click()
     tokens = rank_element.strip().split()
 
     # Extract Rank
@@ -129,28 +127,13 @@ def get_listings(isbn_10):
         element = element.replace("Used - ", "")
 
         # Convert quality to numerical value
-        if element == "New":
-            quality_list.append(0)
-        elif element == "Like New":
-            quality_list.append(1)
-        elif element == "Very Good":
-            quality_list.append(2)
-        elif element == "Good":
-            quality_list.append(3)
-        elif element == "Acceptable":
-            quality_list.append(4)
-
-    book_list = []
-
-    # Combines price and quality
-    for a, b in zip(price_list, quality_list):
-        book_list.append((a, b))
+        quality_list.append(condition_stoi[element])
 
     # Gets specific item data in tuple
     item = (price_list[0], rank)
 
     driver.close()
 
-    return item, book_list
+    return item, price_list, quality_list
 
-print(get_listings(convert_isbn(9781936806119)))
+print(get_listings(9781936806119))

@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useGlobalContext } from "../context/GlobalContext";
+import Link from 'next/link';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-	const { images, setImages, boxedImages, setBoxedImages, isbns, setIsbns } = useGlobalContext();
+	const { images, setImages, boxedImages, setBoxedImages, isbns, setIsbns, spreadsheet, setSpreadsheet } = useGlobalContext();
 	const [isbnInput, setIsbnInput] = useState('');
+    const [loading, setLoading] = useState<boolean>(false);
+    const router = useRouter();
 
 	const handleInputChange = (e) => {
         setIsbnInput(e.target.value);
@@ -19,6 +24,39 @@ export default function Home() {
 	const removeISBN = (index: number) => {
         setIsbns(isbns.slice(0, index).concat(isbns.slice(index + 1)));
     };
+
+	const processIsbns = async () => {
+		try {
+			let formData = new FormData();
+			formData.append("isbns", JSON.stringify(isbns));
+	
+			const response = await axios.post(
+				"http://127.0.0.1:5328/api/genSpreadsheet",
+				formData,
+				{ headers: { "Content-Type": "multipart/form-data", }, responseType: 'blob'}
+			);
+			
+			// create url for the spreadsheet
+			const file = new Blob([response.data], { type: response.data.type })
+			const fileURL = URL.createObjectURL(file);
+			setSpreadsheet(fileURL)
+	
+			const link = document.createElement('a');
+			link.href = fileURL;
+			link.setAttribute('download', 'example.xlsx')
+			document.body.appendChild(link);
+			link.click();
+		} catch (error) {
+			console.error('Error downloading file', error)
+		}
+    };
+
+	const handleDone = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.preventDefault();
+        setLoading(true);
+        await processIsbns();
+        router.push("/done")
+	};
 
     return (
 		<main className="flex">
@@ -46,6 +84,11 @@ export default function Home() {
 					<button onClick={addISBN} className="px-2 py-1 bg-green-500 rounded hover:bg-green-600
 							active:bg-green-700 focus:outline-none focus:ring focus:ring-green-300">✓</button>
 				</div>
+				<Link onClick={handleDone} className="
+                mt-4 px-4 py-2 bg-blue-500 text-white rounded 
+                shadow hover:bg-blue-300" href={"/isbn-review"}
+            >Done</Link>
+            {loading && <p>Loading...</p>}
 			</div>
 		</main>
     );

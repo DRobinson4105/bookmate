@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState, ChangeEvent } from 'react';
 import { useGlobalContext } from './context/GlobalContext';
 import Link from 'next/link';
@@ -7,7 +8,7 @@ import { useRouter } from 'next/navigation';
 
 export default function Home() {
     const router = useRouter();
-	const { images, setImages, boxedImages, setBoxedImages, isbns, setIsbns } = useGlobalContext();
+	const { images, setImages, boxedImages, setBoxedImages, isbns, setIsbns, spreadsheet, setSpreadsheet } = useGlobalContext();
     const [nonImageFiles, setNonImageFiles] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
 

@@ -8,6 +8,8 @@ type GlobalContextType = {
   setBoxedImages: (ibns: string[]) => void;
   isbns: string[];
   setIsbns: (ibns: string[]) => void;
+  spreadsheet: string;
+  setSpreadsheet: (images: string) => void;
 };
 
 const defaultState: GlobalContextType = {
@@ -16,7 +18,9 @@ const defaultState: GlobalContextType = {
   boxedImages: [],
   setBoxedImages: () => {},
   isbns: [],
-  setIsbns: () => {}
+  setIsbns: () => {},
+  spreadsheet: '',
+  setSpreadsheet: () => {},
 };
 
 const GlobalContext = createContext<GlobalContextType>(defaultState);
@@ -31,9 +35,10 @@ export const GlobalProvider: React.FC<Props> = ({ children }) => {
     const [images, setImages] = useState<File[]>([]);
     const [boxedImages, setBoxedImages] = useState<string[]>([]);
     const [isbns, setIsbns] = useState<string[]>([]);
+    const [spreadsheet, setSpreadsheet] = useState<string>('');
 
     return (
-        <GlobalContext.Provider value={{ images, setImages, boxedImages, setBoxedImages, isbns, setIsbns }}>
+        <GlobalContext.Provider value={{ images, setImages, boxedImages, setBoxedImages, isbns, setIsbns, spreadsheet, setSpreadsheet }}>
             {children}
         </GlobalContext.Provider>
     );
