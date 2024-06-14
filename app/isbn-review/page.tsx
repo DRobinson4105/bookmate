@@ -12,7 +12,7 @@ export default function Home() {
     const [loading, setLoading] = useState<boolean>(false);
     const router = useRouter();
 
-	const handleInputChange = (e) => {
+	const handleInputChange = (e: any) => {
         setIsbnInput(e.target.value);
     };
 

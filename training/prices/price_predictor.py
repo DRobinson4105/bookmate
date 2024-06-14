@@ -12,15 +12,9 @@ FINAL_LAYER_SIZE=10
 LISTINGS_SIZE=50
 
 def pre_process(list):
-    print(list)
-    list = [torch.tensor(x, dtype=torch.float, device=device) for x in list]
-    print(list)
-    # list = [nn.Flatten()(x.unsqueeze(dim=0))[:LISTINGS_SIZE].squeeze() for x in list]
-    # print(list)
+    list = [torch.tensor(x[:LISTINGS_SIZE], dtype=torch.float, device=device) for x in list]
     list = [F.pad(x, (0, max(0, LISTINGS_SIZE - x.size(0))), 'constant', 0) for x in list]
-    print(list)
     list = pad_sequence(list).transpose(0, 1)
-    print(list)
     return list
 
 class BookDataset(Dataset):

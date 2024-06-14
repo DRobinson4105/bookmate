@@ -6,14 +6,10 @@ from flask_cors import CORS
 from waitress import serve
 from dotenv import load_dotenv
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
-from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader
 import os
 import io
 import base64
-from price_predictor import Model, BookDataset
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -22,6 +18,12 @@ import easyocr
 from PIL import Image
 import openpyxl
 from openpyxl.styles import PatternFill
+import sys
+
+# move to training directory
+sys.path.append('../training/prices')
+from price_predictor import Model, BookDataset
+sys.path.append('../../api')
 
 reader = easyocr.Reader(['en'])
 
@@ -132,7 +134,6 @@ def get_spreadsheet():
     length = len(prices)
     green = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")
 
-    # print(prices, isbns)
     for i in range(length):
         cell = lambda l: l + str(i+4)
         row = [1, 0, 0, prices[i], None, isbns[i], "ISBN", "New"]
@@ -147,7 +148,6 @@ def get_spreadsheet():
         for col in range(42, 47):
             sheet.cell(row=i+4, column=col).value = "not_applicable"
 
-    workbook.save("test2.xlsx")
     io_stream = io.BytesIO()
     workbook.save(io_stream)
     io_stream.seek(0)
