@@ -40,12 +40,6 @@ export default function Home() {
 			const file = new Blob([response.data], { type: response.data.type })
 			const fileURL = URL.createObjectURL(file);
 			setSpreadsheet(fileURL)
-	
-			const link = document.createElement('a');
-			link.href = fileURL;
-			link.setAttribute('download', 'example.xlsx')
-			document.body.appendChild(link);
-			link.click();
 		} catch (error) {
 			console.error('Error downloading file', error)
 		}
