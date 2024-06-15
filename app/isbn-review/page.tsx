@@ -37,9 +37,9 @@ export default function Home() {
 			);
 			
 			// create url for the spreadsheet
-			const file = new Blob([response.data], { type: response.data.type })
+			const file = new Blob([response.data], { type: response.data.type });
 			const fileURL = URL.createObjectURL(file);
-			setSpreadsheet(fileURL)
+			setSpreadsheet(fileURL);
 		} catch (error) {
 			console.error('Error downloading file', error)
 		}
