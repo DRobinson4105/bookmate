@@ -294,13 +294,10 @@ price_model = Model().to(device)
 price_model.load_state_dict(torch.load(f="pricePrediction.pt"))
 
 def get_prices(details_list, prices_list, conditions_list):
-    result = []
-    
     dataset = BookDataset(details_list, prices_list, conditions_list)
-    dataloader = DataLoader(dataset)
-
-    for details, prices, conditions, _ in dataloader:
-        result.append(price_model(details, prices, conditions).item())
+    dataloader = DataLoader(dataset, batch_size=len(details_list))
+    details, prices, conditions, _ = next(iter(dataloader))
+    result = price_model(details, prices, conditions).tolist()
 
     return result
 

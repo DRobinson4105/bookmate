@@ -7,3 +7,4 @@ python-dotenv
 selenium
 torch
 easyocr
+scikit-learn
