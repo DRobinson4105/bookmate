@@ -24,7 +24,7 @@ model = Model().to(device)
 loss_fn = nn.MSELoss()
 optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-4, weight_decay=1e-5)
 
-epochs = 1000
+epochs = 10000
 train_loss_values = []
 test_loss_values = []
 avg_train_loss, avg_test_loss = 0, 0

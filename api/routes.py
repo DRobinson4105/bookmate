@@ -14,7 +14,6 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import time
 import easyocr
-from PIL import Image
 import openpyxl
 from openpyxl.styles import PatternFill
 import sys
