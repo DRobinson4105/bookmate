@@ -1,6 +1,5 @@
 def isbn10_to_isbn13(isbn10):
     isbn10 = isbn10.replace('-', '')
-    isbn10 = isbn10[:-1]
     if len(isbn10) != 10:
         return 0
 
@@ -19,7 +18,9 @@ def isbn10_to_isbn13(isbn10):
 
     return isbn13 + str(check_digit)
 
-isbn = ''
-while isbn != 'exit':
-    print(int(isbn10_to_isbn13(isbn)))
-    isbn = input()
+isbn = input()
+while True:
+    try:
+        print(isbn10_to_isbn13(isbn))
+        isbn = input()
+    except: break

@@ -12,7 +12,6 @@ import io
 import base64
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
 import time
 import easyocr
 from PIL import Image
@@ -27,12 +26,7 @@ sys.path.append('../../api')
 
 reader = easyocr.Reader(['en'])
 
-options = Options()
-options.headless = False
-
-scrollTime = 1
-
-condition_stoi = {'New': 0, 'Like New': 1, 'Very Good': 2, 'Good': 3, 'Acceptable': 4}
+condition_stoi = {'New': 1, 'Like New': 0.85, 'Very Good': 0.7, 'Good': 0.6, 'Acceptable': 0.4}
 
 app = Flask(__name__)
 CORS(app)
@@ -113,40 +107,43 @@ def get_spreadsheet():
     # unstringify list
     isbns = isbns.strip(']["').split('","')
 
-    details_list, prices_list, conditions_list = [], [], []
+    prices_list, conditions_list = [], []
     temp = []
     for isbn in isbns:
-        a, b, c = get_listings(isbn)
-        if a == None: continue
+        a, b = get_listings(isbn)
+        if a == None or len(a) == 0: continue
         temp.append(isbn)
 
-        details_list.append(a)
-        prices_list.append(b)
-        conditions_list.append(c)
+        prices_list.append(a)
+        conditions_list.append(b)
 
     # Rebuild isbn list with only valid isbns
     isbns = temp
 
-    prices = get_prices(details_list, prices_list, conditions_list)
-
+    # base spreadsheet
     workbook = openpyxl.load_workbook('template.xlsx')
-    sheet = workbook.active
-    length = len(prices)
-    green = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")
 
-    for i in range(length):
-        cell = lambda l: l + str(i+4)
-        row = [1, 0, 0, prices[i], None, isbns[i], "ISBN", "New"]
+    # if there are any valid books to be sold
+    if (len(prices_list) != 0):
+        prices = get_prices(prices_list, conditions_list)
 
-        for col, value in enumerate(row, start=1):
-            sheet.cell(row=i+4, column=col).value = value
+        sheet = workbook.active
+        length = len(prices)
+        green = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")
 
-        sheet[cell("C")].fill = green
-        sheet[cell("U")] = "Amazon_NA"
-        sheet[cell("AB")] = "NO"
-        
-        for col in range(42, 47):
-            sheet.cell(row=i+4, column=col).value = "not_applicable"
+        for i in range(length):
+            cell = lambda l: l + str(i+4)
+            row = [1, 0, 0, prices[i], None, isbns[i], "ISBN", "New"]
+
+            for col, value in enumerate(row, start=1):
+                sheet.cell(row=i+4, column=col).value = value
+
+            sheet[cell("C")].fill = green
+            sheet[cell("U")] = "Amazon_NA"
+            sheet[cell("AB")] = "NO"
+            
+            for col in range(42, 47):
+                sheet.cell(row=i+4, column=col).value = "not_applicable"
 
     io_stream = io.BytesIO()
     workbook.save(io_stream)
@@ -173,8 +170,8 @@ def get_listings(isbn_13):
     isbn_10 = isbn_string[slice(3, 12)] + check_digit
 
     link = f"https://www.amazon.com/dp/{isbn_10}"
-    driver = webdriver.Chrome(options=options)
 
+    driver = webdriver.Chrome()
     driver.get(link)
 
     # Keep retrying the Captcha until a success is found/No Captcha, Every attempt changes the captcha on amazon
@@ -208,27 +205,11 @@ def get_listings(isbn_13):
         except:
             return None, None, None
 
-    if(listings == None): exit()
-
-    # Get rank for item
-    try:
-        rank_element = driver.find_element(By.XPATH,
-                                    "//*[@id='detailBulletsWrapper_feature_div']/ul[1]/li/span").get_attribute(
-                                        "textContent")
-        tokens = rank_element.strip().split()
-    except:
-        tokens = []
+    if listings == None: exit()
 
     listings.click()
 
-    # Extract Rank
-    rank = 0
-    for token in tokens:
-        if token[0] == '#':
-            rank = int(token.replace('#', "").replace(',', ""))
-            break
-
-    driver.implicitly_wait(2*scrollTime)
+    driver.implicitly_wait(2)
 
     counter = 1
 
@@ -280,26 +261,24 @@ def get_listings(isbn_13):
         # Convert quality to numerical value
         conditions_list.append(condition_stoi[element])
 
-    # Gets specific item data in tuple
-    details_list = (prices_list[0], rank)
-
     driver.close()
 
-    return details_list, prices_list, conditions_list
+    return prices_list, conditions_list
 
 # Price Prediction
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 price_model = Model().to(device)
 price_model.load_state_dict(torch.load(f="pricePrediction.pt"))
+price_model.eval()
 
-def get_prices(details_list, prices_list, conditions_list):
-    dataset = BookDataset(details_list, prices_list, conditions_list)
-    dataloader = DataLoader(dataset, batch_size=len(details_list))
-    details, prices, conditions, _ = next(iter(dataloader))
-    result = price_model(details, prices, conditions).tolist()
-
-    return result
+def get_prices(prices_list, conditions_list):
+    dataset = BookDataset(prices_list, conditions_list, device=device)
+    dataloader = DataLoader(dataset, batch_size=len(prices_list))
+    prices, conditions, _ = next(iter(dataloader))
+    
+    with torch.inference_mode():
+        return price_model(prices, conditions).tolist()
 
 if __name__ == "__main__":
     print("API Ready")
