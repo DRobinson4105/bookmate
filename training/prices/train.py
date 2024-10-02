@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import pandas as pd
-from price_predictor import Model, BookDataset
+from utils import Model, BookDataset
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
@@ -22,15 +22,15 @@ test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
 model = Model().to(device)
 loss_fn = nn.MSELoss()
-optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-4, weight_decay=1e-5)
+optimizer = torch.optim.Adam(params=model.parameters(), lr=1e-4, weight_decay=1e-4)
 
-epochs = 10000
+epochs = 50000
 train_loss_values = []
 test_loss_values = []
 avg_train_loss, avg_test_loss = 0, 0
 
 for epoch in tqdm(range(epochs)):
-    if (epoch % (epochs / 100) == 0):
+    if (epoch % 100 == 0):
         tqdm.write(f"Train Loss: {round(avg_train_loss, 2)} | Test Loss: {round(avg_test_loss, 2)}")
 
     # Training

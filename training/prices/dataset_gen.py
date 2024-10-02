@@ -3,7 +3,7 @@ from selenium.webdriver.common.by import By
 import time
 import easyocr
 from PIL import Image
-from price_predictor import BookDataset, Model
+from utils import BookDataset, Model
 import pandas as pd
 import torch
 from tqdm.auto import tqdm

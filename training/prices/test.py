@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-from price_predictor import BookDataset, Model
+from utils import BookDataset, Model
 
 torch.manual_seed(1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

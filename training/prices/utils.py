@@ -50,12 +50,12 @@ class Model(nn.Module):
         self.prices_processor = nn.Sequential(
             nn.Linear(LISTINGS_SIZE, SEQUENCE_LAYER_SIZE),
             nn.BatchNorm1d(SEQUENCE_LAYER_SIZE),
-            nn.Dropout()
+            nn.Dropout(p=0.6)
         )
         self.conditions_processor = nn.Sequential(
             nn.Linear(LISTINGS_SIZE, SEQUENCE_LAYER_SIZE),
             nn.BatchNorm1d(SEQUENCE_LAYER_SIZE),
-            nn.Dropout()
+            nn.Dropout(p=0.6)
         )
         self.middle_layer = nn.Sequential(
             nn.Linear(SEQUENCE_LAYER_SIZE * 2, FINAL_LAYER_SIZE),
