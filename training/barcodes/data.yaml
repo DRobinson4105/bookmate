@@ -1,8 +1,15 @@
-path: barcodes_obb
+path: barcodes
 
-train: train/images
-test: test/images
+train: ../train/images
+val: ../valid/images
+test: ../test/images
 
 nc: 1
-names: 
-  0: Barcode
+names: ['0']
+
+roboflow:
+  workspace: barcodes-cfri0
+  project: thisisnotgood
+  version: 5
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/barcodes-cfri0/thisisnotgood/dataset/5
