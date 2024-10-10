@@ -17,11 +17,8 @@ import easyocr
 import openpyxl
 from openpyxl.styles import PatternFill
 import sys
-
-# move to training directory
-sys.path.append('../training/prices')
-from price_predictor import Model, BookDataset
-sys.path.append('../../api')
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from training.prices.utils import Model, BookDataset
 
 reader = easyocr.Reader(['en'])
 
@@ -237,8 +234,8 @@ def get_listings(isbn_13):
     # Get all price listings
     while True:
         try:
-            price = driver.find_element(By.XPATH, f"//*[@id='aod-price-{count}']/div/span/span[1]").get_attribute("textContent")
-            element = price.replace("$", "")
+            price = driver.find_element(By.XPATH, f"//*[@id='aod-price-{count}']/div/span[1]").get_attribute("textContent")
+            element = price.replace("$", "").split()[0]
             element = float(element)
             prices_list.append(element)
         except:

@@ -35,7 +35,7 @@ export default function Home() {
 			let formData = new FormData();
 			formData.append("file", image as Blob);
 			const response = await axios.post(
-				"http://127.0.0.1:5328/api/getISBNs",
+				`http://127.0.0.1:${process.env.NEXT_PUBLIC_FLASK_PORT}/api/getISBNs`,
 				formData,
 				{ headers: { "Content-Type": "multipart/form-data", }, }
 			);
