@@ -7,7 +7,10 @@ git clone https://github.com/DRobinson4105/bookmate.git
 cd bookmate
 npm install
 pip install -r requirements.txt
+cd training
+pip install -e .
 ```
+and install PyTorch following the [official instructions](https://pytorch.org/get-started/locally/)
 
 ## Configuration
 - Create a `.env` file in the project root directory with the following template
